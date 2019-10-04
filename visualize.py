@@ -233,6 +233,7 @@ import torchvision
 import torch.nn as nn
 import torchvision.transforms as transforms
 import torch.optim as optim
+import argparse
 
 def imshow(img):
     img = img / 2 + 0.5    
@@ -241,40 +242,50 @@ def imshow(img):
     plt.show()
 
 
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+
+def visualize(saliency_model):
+    transform = transforms.Compose(
+    [transforms.ToTensor(),transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                            download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+                                            shuffle=True, num_workers=2)
+
+    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                         download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-                                          shuffle=True, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=4,
+                                            shuffle=False, num_workers=2)
 
-testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                         shuffle=False, num_workers=2)
-
-classes = ('plane', 'car', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+    classes = ('plane', 'car', 'bird', 'cat',
+            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
-net = ResNet18()
-net = net.cuda()
+    net = ResNet18()
+    net = net.cuda()
 
-net = torch.load('saliency_model.tar')
+    net = torch.load(saliency_model)
 
-for i, data in enumerate(testloader, 0):
+    for i, data in enumerate(testloader, 0):
 
-    inputs, labels = data
+        inputs, labels = data
 
-    inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+        inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 
-    masks,_ = net(inputs,labels)
-    #Original Image
-    imshow(torchvision.utils.make_grid(inputs.cpu().data))
-    #Mask
-    imshow(torchvision.utils.make_grid(masks.cpu().data))
-    #Image Segmented
-    imshow(torchvision.utils.make_grid((inputs*masks).cpu().data))
+        masks,_ = net(inputs,labels)
+        #Original Image
+        imshow(torchvision.utils.make_grid(inputs.cpu().data))
+        #Mask
+        imshow(torchvision.utils.make_grid(masks.cpu().data))
+        #Image Segmented
+        imshow(torchvision.utils.make_grid((inputs*masks).cpu().data))
+
+# def __main__():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--saliencyModel", type=str, default='data/checkpoints/saliency_model_2222.tar')
+#     args = parser.parse_args()
+#     saliencyModel = args.saliencyModel
+#     visualize(saliency_model=saliencyModel)
     
+# __main__()

@@ -6,10 +6,14 @@ import torch.optim as optim
 from torch.autograd import Variable
 from scipy import misc
 from model import saliency_model
-from resnet import resnet
+from resnet import *
 from loss import Loss
+import argparse
+
+
 
 def save_checkpoint(state, filename='sal.pth.tar'):
+    print('saving ', filename, '...')
     torch.save(state, filename)
 
 def load_checkpoint(net,optimizer,filename='small.pth.tar'):
@@ -27,20 +31,22 @@ def cifar10():
         [transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+    trainset = torchvision.datasets.CIFAR10(root='data/', train=True,
                                             download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-                                            shuffle=True, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                            shuffle=True, num_workers=num_workers)
 
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+    testset = torchvision.datasets.CIFAR10(root='data/', train=False,
                                         download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-                                            shuffle=False, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+                                            shuffle=False, num_workers=num_workers)
 
     return trainloader,testloader,classes
+
 from tqdm import tqdm
 
-def train():
+
+def train(batch_size, num_workers, regularizers, checkpoint_file):
     num_epochs = 3
     trainloader,testloader,classes = cifar10()
 
@@ -49,14 +55,22 @@ def train():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters())
 
-    black_box_func = resnet()
-    black_box_func = black_box_func.cuda()
-    loss_func = Loss(num_classes=10)
+    # black_box_func = resnet(pretrained=True)
+    # black_box_func = black_box_func.cuda()
+    model_name = 'alexnet'
+    black_box_func = BlackBoxModel(model_name=model_name, pretrained=True, num_classes=10)
+    black_box_func.load('data/checkpoints/black_box_model_alexnet.tar')
+    black_box_func.toCuda()
+    black_box_func = black_box_func.getModel()
+
+    
+    loss_func = Loss(num_classes=10,regularizers= regularizers)
 
     for epoch in range(num_epochs):  # loop over the dataset multiple times
-        
+        print("----- Epoch {}/{}".format(epoch, num_epochs))
         running_loss = 0.0
         running_corrects = 0.0
+        running_loss_train = 0.0
         
         for i, data in tqdm(enumerate(trainloader, 0)):
             # get the inputs
@@ -69,17 +83,42 @@ def train():
             optimizer.zero_grad()
 
             mask,out = net(inputs,labels)
+            # print('-----mask shape:',mask.shape)
+            # print('-----inputs shape:',inputs.shape)
+            # print('-----labels shape:', labels.shape)
+            # print(labels)
         
             loss = loss_func.get(mask,inputs,labels,black_box_func)
-            running_loss += loss.data[0]
+            # running_loss += loss.data[0]
+            running_loss += loss.item()
+            running_loss_train += loss.item()*inputs.size(0)
 
-            if(i%10 == 0):
-                print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(4*(i+1))) )
+            # if(i%10 == 0):
+            #     print('Epoch = %f , Loss = %f '%(epoch+1 , running_loss/(batch_size*(i+1))) )
         
             loss.backward()
             optimizer.step()
-        
-        save_checkpoint(net,'saliency_model.tar')
+        epoch_loss = running_loss / len(trainloader.dataset)
+        epoch_loss_train = running_loss_train / len(trainloader.dataset)
+        print("{} RawLoss: {:.4f} Loss: {:.4f}".format("train", epoch_loss,epoch_loss_train))
+        save_checkpoint(net, checkpoint_file)
 
-train()
+def __main__():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batchSize", type=int, default=8)
+    parser.add_argument("--numWorkers", type=int, default=4)
+    parser.add_argument("--areaL", type=float, default=8)
+    parser.add_argument("--smoothL", type=float, default=0.5)
+    parser.add_argument("--preserverL", type=float, default=0.3)
+    parser.add_argument("--areaPowerL", type=float, default=0.3)
+    parser.add_argument("--checkpointPath",type=str,default='data/checkpoints/saliency_model_2222.tar')
+    args = parser.parse_args()
+
+    batch_size = args.batchSize
+    num_workers = args.numWorkers
+    regularizers = {'area_loss_coef': args.areaL, 'smoothness_loss_coef': args.smoothL, 'preserver_loss_coef': args.preserverL, 'area_loss_power': args.areaPowerL}
+    checkpoint_path = args.checkpointPath
+    train(batch_size, num_workers, regularizers, checkpoint_path)
+    
+__main__()
 

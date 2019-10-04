@@ -115,8 +115,12 @@ class SaliencyModel(nn.Module):
         scale3 = self.layer3(scale2)
         scale4 = self.layer4(scale3)
 
-      
-        em = torch.squeeze(self.embedding(labels.view(-1, 1)), 1)
+        # print('scale4: ',scale4.size())
+
+        aa = labels.view(-1, 1) #vertical vector
+        # print(aa.size(),aa)
+        em = torch.squeeze(self.embedding(aa), 1) #remove dimentions wint size 1
+        # print('embedding size: ',em.size()) #torch.Size([8, 512])
         act = torch.sum(scale4*em.view(-1, 512, 1, 1), 1, keepdim=True)
         th = torch.sigmoid(act)
         scale4 = scale4*th

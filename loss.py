@@ -9,16 +9,21 @@ import numpy as np
 
 class Loss: 
     
-    def __init__(self,num_classes):
+    def __init__(self,num_classes, regularizers):
         self.num_classes = num_classes
-        self.area_loss_coef = 8
-        self.smoothness_loss_coef = 0.5
-        self.preserver_loss_coef = 0.3
-        self.area_loss_power = 0.3
+        # self.area_loss_coef = 8
+        # self.smoothness_loss_coef = 0.5
+        # self.preserver_loss_coef = 0.3
+        # self.area_loss_power = 0.3
+        self.area_loss_coef = regularizers['area_loss_coef']
+        self.smoothness_loss_coef = regularizers['smoothness_loss_coef']
+        self.preserver_loss_coef = regularizers['preserver_loss_coef']
+        self.area_loss_power = regularizers['area_loss_power']
     
     def get(self, masks, images, targets, black_box_func):
     
         one_hot_targets = self.one_hot(targets)
+        # print(one_hot_targets)
         
         area_loss = self.area_loss(masks)
         smoothness_loss = self.smoothness_loss(masks)
@@ -59,6 +64,7 @@ class Loss:
   
     def destroyer_loss(self,images,masks,targets,black_box_func):
         destroyed_images = self.apply_mask(images,1 - masks)
+        # print('destroyer loss mask: ',destroyed_images.size())
         out = black_box_func(destroyed_images)
         
         return self.cw_loss(out, targets, targeted=False, t_conf=1., nt_conf=5)
