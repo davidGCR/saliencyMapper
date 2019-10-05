@@ -22,7 +22,7 @@ def load_checkpoint(net,optimizer,filename='small.pth.tar'):
     optimizer.load_state_dict(checkpoint['optimizer'])
     return net,optimizer
 
-def cifar10():
+def cifar10(batch_size, num_workers):
     
     classes = ('plane', 'car', 'bird', 'cat',
             'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -48,7 +48,7 @@ from tqdm import tqdm
 
 def train(batch_size, num_workers, regularizers, checkpoint_file):
     num_epochs = 3
-    trainloader,testloader,classes = cifar10()
+    trainloader,testloader,classes = cifar10(batch_size, num_workers)
 
     net = saliency_model()
     net = net.cuda()
