@@ -11,6 +11,26 @@ import argparse
 
 num_workers = 4
 batch_size = 4
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+def subplot(img1, img2, img3):
+    fig2 = plt.figure(figsize=(12,12))
+    img1 = img1 / 2 + 0.5    
+    npimg1 = img1.numpy()
+    plt.subplot(311)
+    plt.imshow(np.transpose(npimg1, (1, 2, 0)))
+
+    img2 = img2 / 2 + 0.5    
+    npimg2 = img2.numpy()
+    plt.subplot(312)
+    plt.imshow(np.transpose(npimg2, (1, 2, 0)))
+
+    img3 = img3 / 2 + 0.5    
+    npimg3 = img3.numpy()
+    plt.subplot(313)
+    plt.imshow(np.transpose(npimg3, (1, 2, 0)))
+
+    plt.show()
 
 def imshow(img):
     img = img / 2 + 0.5    
@@ -50,11 +70,15 @@ def test(saliency_model_file):
 
         masks,_ = net(inputs,labels)
         #Original Image
-        imshow(torchvision.utils.make_grid(inputs.cpu().data))
+        di_images = torchvision.utils.make_grid(inputs.cpu().data, padding=padding)
+        # imshow(torchvision.utils.make_grid(inputs.cpu().data))
         #Mask
-        imshow(torchvision.utils.make_grid(masks.cpu().data))
+        mask = torchvision.utils.make_grid(masks.cpu().data, padding=padding)
+        # imshow(torchvision.utils.make_grid(masks.cpu().data))
         #Image Segmented
-        imshow(torchvision.utils.make_grid((inputs * masks).cpu().data))
+        # imshow(torchvision.utils.make_grid((inputs * masks).cpu().data))
+        segmented = torchvision.utils.make_grid((inputs*masks).cpu().data, padding=padding)
+        subplot(di_images, mask, segmented)
     
 def __main__():
     parser = argparse.ArgumentParser()
