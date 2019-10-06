@@ -61,7 +61,7 @@ def test(saliency_model_file):
     net = net.cuda()
 
     net = torch.load(saliency_model_file)
-
+    padding = 20
     for i, data in enumerate(testloader, 0):
 
         inputs, labels = data
