@@ -113,13 +113,14 @@ def __main__():
     parser.add_argument("--smoothL", type=float, default=0.5)
     parser.add_argument("--preserverL", type=float, default=0.3)
     parser.add_argument("--areaPowerL", type=float, default=0.3)
-    # parser.add_argument("--checkpointName",type=str,default='data/checkpoints/s)
+    parser.add_argument("--checkpointInfo",type=str)
     args = parser.parse_args()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = args.batchSize
     num_workers = args.numWorkers
     regularizers = {'area_loss_coef': args.areaL, 'smoothness_loss_coef': args.smoothL, 'preserver_loss_coef': args.preserverL, 'area_loss_power': args.areaPowerL}
-    checkpoint_path = os.path.join('data/checkpoints','saliency_model_test.tar')
+    checkpoint_info = args.checkpointInfo
+    checkpoint_path = os.path.join('data/checkpoints','saliency_model_'+checkpoint_info+'tar')
     train(batch_size, num_workers, regularizers, device, checkpoint_path)
     
 __main__()
