@@ -127,11 +127,17 @@ class BlackBoxModel:
         elif model_name == 'alexnet':
             self.model = AlexNet(pretrained=pretrained,num_classes=num_classes)
     
-    def load(self, model_path):
-        self.model = torch.load(model_path)
+    def load(self, model_path, device='gpu'):
+        if device=='cpu':
+            self.model = torch.load(model_path, map_location=lambda storage, loc: storage)
+        else:
+            self.model = torch.load(model_path)
 
     def toCuda(self):
         self.model = self.model.cuda()
+    
+    def toDevice(self, device):
+        self.model = self.model.to(device)
     
     def getModel(self):
         return self.model

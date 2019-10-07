@@ -9,6 +9,7 @@ from model import saliency_model
 from resnet import *
 from loss import Loss
 import argparse
+import os
 
 
 
@@ -46,21 +47,22 @@ def cifar10(batch_size, num_workers):
 from tqdm import tqdm
 
 
-def train(batch_size, num_workers, regularizers, checkpoint_file):
+def train(batch_size, num_workers, regularizers, device, checkpoint_file):
     num_epochs = 3
     trainloader,testloader,classes = cifar10(batch_size, num_workers)
 
     net = saliency_model()
-    net = net.cuda()
+    net = net.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters())
 
     # black_box_func = resnet(pretrained=True)
     # black_box_func = black_box_func.cuda()
     model_name = 'alexnet'
+    # defaults.device = 'cpu'
     black_box_func = BlackBoxModel(model_name=model_name, pretrained=True, num_classes=10)
-    black_box_func.load('data/checkpoints/black_box_model_alexnet.tar')
-    black_box_func.toCuda()
+    black_box_func.load('data/checkpoints/black_box_model_alexnet.tar',device='cpu')
+    black_box_func.toDevice(device)
     black_box_func = black_box_func.getModel()
 
     
@@ -77,7 +79,7 @@ def train(batch_size, num_workers, regularizers, checkpoint_file):
             inputs, labels = data
 
             # wrap them in Variable
-            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            inputs, labels = Variable(inputs.to(device)), Variable(labels.to(device))
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -111,14 +113,14 @@ def __main__():
     parser.add_argument("--smoothL", type=float, default=0.5)
     parser.add_argument("--preserverL", type=float, default=0.3)
     parser.add_argument("--areaPowerL", type=float, default=0.3)
-    parser.add_argument("--checkpointPath",type=str,default='data/checkpoints/saliency_model_2222.tar')
+    # parser.add_argument("--checkpointName",type=str,default='data/checkpoints/s)
     args = parser.parse_args()
-
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = args.batchSize
     num_workers = args.numWorkers
     regularizers = {'area_loss_coef': args.areaL, 'smoothness_loss_coef': args.smoothL, 'preserver_loss_coef': args.preserverL, 'area_loss_power': args.areaPowerL}
-    checkpoint_path = args.checkpointPath
-    train(batch_size, num_workers, regularizers, checkpoint_path)
+    checkpoint_path = os.path.join('data/checkpoints','saliency_model_test.tar')
+    train(batch_size, num_workers, regularizers, device, checkpoint_path)
     
 __main__()
 
