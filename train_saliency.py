@@ -61,7 +61,7 @@ def train(batch_size, num_workers, regularizers, device, checkpoint_file):
     model_name = 'alexnet'
     # defaults.device = 'cpu'
     black_box_func = BlackBoxModel(model_name=model_name, pretrained=True, num_classes=10)
-    black_box_func.load('data/checkpoints/black_box_model_alexnet.tar',device='cpu')
+    black_box_func.load('data/checkpoints/black_box_model_alexnet.tar',device='gpu')
     black_box_func.toDevice(device)
     black_box_func = black_box_func.getModel()
 
@@ -120,7 +120,7 @@ def __main__():
     num_workers = args.numWorkers
     regularizers = {'area_loss_coef': args.areaL, 'smoothness_loss_coef': args.smoothL, 'preserver_loss_coef': args.preserverL, 'area_loss_power': args.areaPowerL}
     checkpoint_info = args.checkpointInfo
-    checkpoint_path = os.path.join('data/checkpoints','saliency_model_'+checkpoint_info+'tar')
+    checkpoint_path = os.path.join('data/checkpoints','saliency_model_'+checkpoint_info+'.tar')
     train(batch_size, num_workers, regularizers, device, checkpoint_path)
     
 __main__()

@@ -9,9 +9,7 @@ from resnet import *
 from model import *
 import argparse
 
-num_workers = 4
-batch_size = 4
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 def subplot(img1, img2, img3):
     fig2 = plt.figure(figsize=(12,12))
@@ -32,13 +30,24 @@ def subplot(img1, img2, img3):
 
     plt.show()
 
+def normalize(img):
+    print('normalize:', img.size() )
+    _min = torch.min(img)
+    _max = torch.max(img)
+    return (img - _min) / (_max - _min)
+
 def imshow(img):
     img = img / 2 + 0.5    
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
 
-def test(saliency_model_file):
+def print_max_min(img):
+    _min = torch.min(img)
+    _max = torch.max(img)
+    print('min:', _min.item(), ', max:', _max.item())
+
+def test(saliency_model_file, num_workers, batch_size):
     transform = transforms.Compose(
         [transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -46,7 +55,7 @@ def test(saliency_model_file):
     trainset = torchvision.datasets.CIFAR10(root='data/', train=True,
                                             download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                            shuffle=True, num_workers=num_workers)
+                                            shuffle=False, num_workers=num_workers)
 
     testset = torchvision.datasets.CIFAR10(root='data/', train=False,
                                         download=True, transform=transform)
@@ -67,12 +76,15 @@ def test(saliency_model_file):
         inputs, labels = data
 
         inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+        print_max_min(inputs)
 
         masks,_ = net(inputs,labels)
         #Original Image
         di_images = torchvision.utils.make_grid(inputs.cpu().data, padding=padding)
         # imshow(torchvision.utils.make_grid(inputs.cpu().data))
         #Mask
+        normalize(masks)
+        # masks = normalize(masks)
         mask = torchvision.utils.make_grid(masks.cpu().data, padding=padding)
         # imshow(torchvision.utils.make_grid(masks.cpu().data))
         #Image Segmented
@@ -82,9 +94,16 @@ def test(saliency_model_file):
     
 def __main__():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saliencyModelFile", type=str, default='data/checkpoints/saliency_model_2222.tar')
+    parser.add_argument("--saliencyModelFile", type=str)
+    parser.add_argument("--numWorkers", type=int, default=1)
+    parser.add_argument("--batchSize", type=int, default=1)
+
     args = parser.parse_args()
     saliency_model_file = args.saliencyModelFile
-    test(saliency_model_file)
+    num_workers = args.numWorkers
+    batch_size = args.batchSize
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    test(saliency_model_file, num_workers, batch_size)
     
 __main__()
